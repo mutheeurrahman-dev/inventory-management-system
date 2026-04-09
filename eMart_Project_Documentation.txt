@@ -1,0 +1,334 @@
+eMart Inventory Management System (Python + Tkinter + MySQL)
+===========================================================
+
+1) Project Overview
+-------------------
+eMart is a professional, SaaS-style Inventory Management System built with:
+- Python: application logic
+- Tkinter/ttk: modern dashboard-like GUI (sidebar + topbar + pages)
+- MySQL: backend database (inventory_db)
+- mysql-connector-python: MySQL connectivity from Python
+
+The UI is organized like an admin dashboard:
+- Left Sidebar: Dashboard / Inventory / Audit Log / Smart Expiry Predictor
+- Top Bar: App name, global search, quick stats, Admin label
+- Main Content: changes dynamically by section (multi-page frames)
+
+
+2) Key Features (Functional)
+----------------------------
+Inventory (CRUD):
+- Add Product (modal form)
+- Update Product (modal form)
+- Delete Product
+- View products in a ttk Treeview table
+- Search products (by name)
+- Filter products: All / In Stock / Low Stock / Out of Stock
+- Reorder: increase stock by +10
+- Prevent negative stock (validation)
+
+Dashboard:
+- Stat cards:
+  - Total Products
+  - Inventory Value (sum(quantity * price))
+  - Low Stock count (quantity < threshold)
+  - Expiring Soon count (expiry within N days)
+- Recent Activity (from audit logs)
+- Insights text (basic warnings/recommendations)
+
+Audit Log:
+- Stores actions (ADD / UPDATE / DELETE / REORDER)
+- Shows Action, Description, Time in a table
+
+Smart Expiry Predictor (simulation):
+- Uses expiry_date
+- Simulated daily sales rate by category
+- Calculates:
+  - days_to_sell = quantity / daily_sales_rate
+  - days_until_expiry (fractional days)
+  - risk_score = (days_to_sell / days_until_expiry) * 100
+- Labels:
+  - Expired → risk_score = 999
+  - At Risk / Watch / Safe with recommendations
+
+Auto Refresh:
+- Periodically refreshes the current page and topbar stats.
+
+
+3) Database Design (ER / Relational Model)
+-----------------------------------------
+Database: inventory_db
+
+Table A: products
+Columns:
+- id          INT AUTO_INCREMENT PRIMARY KEY
+- name        VARCHAR(255) NOT NULL
+- category    VARCHAR(255) NOT NULL
+- sku         VARCHAR(50) NULL
+- supplier    VARCHAR(255) NULL
+- quantity    INT NOT NULL
+- price       DECIMAL(10,2) NOT NULL
+- expiry_date DATE NULL
+
+Table B: audit_logs
+Columns:
+- id          INT AUTO_INCREMENT PRIMARY KEY
+- action      VARCHAR(50) NOT NULL
+- description VARCHAR(500) NOT NULL
+- created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+
+Relationship:
+- This project keeps audit logs as a separate table (append-only history).
+- There is no foreign key between audit_logs and products because the log
+  stores human-readable text (description) and must remain valid even if a
+  product is deleted. (This is a common auditing pattern.)
+
+
+4) DBMS Concepts Used (What & Where)
+------------------------------------
+
+4.1 DDL (Data Definition Language)
+----------------------------------
+DDL is used to define/modify schema.
+Used in init_db() in inventory_app.py:
+- CREATE DATABASE IF NOT EXISTS inventory_db
+- CREATE TABLE IF NOT EXISTS products (...)
+- CREATE TABLE IF NOT EXISTS audit_logs (...)
+
+Schema migration / upgrade approach:
+- ALTER TABLE ... ADD COLUMN ... (inside try/except)
+This allows the app to run even if an older products table exists.
+
+
+4.2 Primary Key + Auto Increment
+--------------------------------
+Concept:
+- Primary Key uniquely identifies each row.
+- AUTO_INCREMENT generates new IDs automatically.
+
+Used:
+- products.id is PRIMARY KEY AUTO_INCREMENT
+- audit_logs.id is PRIMARY KEY AUTO_INCREMENT
+
+Why:
+- Makes updates/deletes reliable (by id).
+- Provides stable ordering (ORDER BY id DESC for "most recent").
+
+
+4.3 NULL vs NOT NULL
+--------------------
+Concept:
+- NOT NULL enforces required fields.
+- NULL allows optional fields.
+
+Used:
+- name, category, quantity, price are required.
+- sku, supplier, expiry_date are optional (NULL allowed).
+
+Why:
+- Not every product has an expiry date (optional).
+- SKU/Supplier can be added later.
+
+
+4.4 Data Types (Normalization / Correct typing)
+------------------------------------------------
+Concept:
+- Choosing correct types improves integrity and query behavior.
+
+Used:
+- INT for quantity and ids
+- DECIMAL(10,2) for price to avoid floating rounding issues in SQL
+- DATE for expiry_date
+- DATETIME for audit log timestamps
+
+
+4.5 DML (Data Manipulation Language)
+------------------------------------
+DML is used to insert/update/delete/select data.
+Used across the app:
+- INSERT INTO products (...)
+- UPDATE products SET ...
+- DELETE FROM products WHERE id=...
+- SELECT ... FROM products ...
+
+Audit log DML:
+- INSERT INTO audit_logs (action, description) VALUES (...)
+- SELECT action, description, created_at FROM audit_logs ...
+
+
+4.6 Transactions + Commit/Rollback (ACID)
+-----------------------------------------
+Concept:
+- A transaction groups DB changes into an all-or-nothing unit.
+- COMMIT permanently saves.
+- ROLLBACK undoes changes on error.
+
+Used:
+- _db_exec(...) wraps DB operations:
+  - commits on success
+  - rollbacks on mysql.connector.Error
+
+Why:
+- Prevents partial updates (consistency).
+- Improves reliability in real DB environments.
+
+
+4.7 Prepared Statements / Parameterized Queries
+------------------------------------------------
+Concept:
+- Use placeholders (%s) and pass parameters separately.
+- Prevents SQL Injection and handles escaping safely.
+
+Used:
+- WHERE name LIKE %s
+- WHERE id=%s
+- INSERT/UPDATE with %s placeholders
+
+
+4.8 Filtering, Searching, Sorting (Relational Operations)
+---------------------------------------------------------
+Concept:
+- WHERE filters rows
+- LIKE enables pattern search
+- ORDER BY sorts results
+
+Used:
+- Search by name: WHERE name LIKE %s
+- Filters:
+  - In stock: quantity > 0
+  - Low stock: quantity > 0 AND quantity < threshold
+  - Out of stock: quantity = 0
+- ORDER BY id DESC to show newest first.
+
+
+4.9 Aggregation (COUNT, SUM) for Dashboard Stats
+------------------------------------------------
+Concept:
+- Aggregate functions summarize data.
+
+Used in get_dashboard_stats():
+- COUNT(*) => total products
+- SUM(quantity) => total quantity
+- SUM(quantity * price) => inventory value
+- COUNT(*) with condition => low stock count
+
+
+4.10 Date Arithmetic (Expiry / Expiring Soon)
+---------------------------------------------
+Concept:
+- Date calculations in SQL for expiring-soon metrics.
+
+Used:
+- DATEDIFF(expiry_date, CURDATE()) BETWEEN 0 AND EXPIRING_SOON_DAYS
+
+Meaning:
+- Counts products whose expiry_date is within the next N days.
+
+
+5) SQL Queries Used (Examples)
+------------------------------
+NOTE: These are representative of what the code executes.
+
+5.1 Create DB/Table
+-------------------
+CREATE DATABASE IF NOT EXISTS inventory_db;
+
+CREATE TABLE IF NOT EXISTS products (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  category VARCHAR(255) NOT NULL,
+  sku VARCHAR(50) NULL,
+  supplier VARCHAR(255) NULL,
+  quantity INT NOT NULL,
+  price DECIMAL(10,2) NOT NULL,
+  expiry_date DATE NULL
+);
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  action VARCHAR(50) NOT NULL,
+  description VARCHAR(500) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+5.2 Insert product
+------------------
+INSERT INTO products (name, category, sku, supplier, quantity, price, expiry_date)
+VALUES (%s, %s, %s, %s, %s, %s, %s);
+
+5.3 Update product
+------------------
+UPDATE products
+SET name=%s, category=%s, sku=%s, supplier=%s, quantity=%s, price=%s, expiry_date=%s
+WHERE id=%s;
+
+5.4 Delete product
+------------------
+DELETE FROM products WHERE id=%s;
+
+5.5 Inventory listing + search
+------------------------------
+SELECT id, name, category, sku, supplier, quantity, price, expiry_date
+FROM products
+WHERE name LIKE %s
+ORDER BY id DESC;
+
+5.6 Dashboard stats
+-------------------
+SELECT COUNT(*), COALESCE(SUM(quantity),0) FROM products;
+SELECT COALESCE(SUM(quantity * price),0) FROM products;
+SELECT COUNT(*) FROM products WHERE quantity < %s;
+
+5.7 Expiring soon
+-----------------
+SELECT COUNT(*)
+FROM products
+WHERE expiry_date IS NOT NULL
+  AND DATEDIFF(expiry_date, CURDATE()) BETWEEN 0 AND %s;
+
+
+6) Code Structure (High-level)
+------------------------------
+inventory_app.py contains:
+- init_db(): DDL + schema upgrades
+- EmartApp: Main Tkinter app class
+  - UI builder methods:
+    - _build_sidebar(), _build_topbar(), _build_pages()
+  - Page refresh methods:
+    - refresh_dashboard(), refresh_inventory(), refresh_audit(), refresh_expiry()
+  - CRUD modal:
+    - _open_product_modal() for Add/Edit product
+  - DB wrapper:
+    - _db_exec() for commit/rollback
+  - Audit logging:
+    - log_action()
+
+
+7) How to Run in Visual Studio Code
+-----------------------------------
+Step 1: Install dependency
+  pip install mysql-connector-python
+
+Step 2: Start MySQL server
+  Ensure MySQL is running locally (or update host/port).
+
+Step 3: Update credentials
+  Open inventory_app.py and edit DB_CONFIG:
+  - host, user, password, port
+
+Step 4: Run
+  python inventory_app.py
+
+
+8) Suggested Enhancements (Optional)
+------------------------------------
+- Add UNIQUE constraint on sku (if SKU must be unique):
+  ALTER TABLE products ADD UNIQUE (sku);
+- Add indexes for faster search/filtering:
+  CREATE INDEX idx_products_name ON products(name);
+  CREATE INDEX idx_products_quantity ON products(quantity);
+  CREATE INDEX idx_products_expiry ON products(expiry_date);
+- Add a foreign key to link audit_logs to product_id (optional) while still
+  keeping description text.
+- Add authentication (login screen) + role-based access.
+
