@@ -1,0 +1,191 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;500&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background-color: #f1f3f6;
+    color: #2e2e2e;
+    font-family: 'Roboto', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #f1f3f6; }
+  ::-webkit-scrollbar-thumb { background: #c2c2c2; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #2874f0; }
+}
+
+@layer components {
+  /* Flipkart card */
+  .fk-card {
+    background: #ffffff;
+    border: 1px solid #f0f0f0;
+    border-radius: 2px;
+    box-shadow: 0 2px 4px 0 rgba(0,0,0,.08);
+  }
+
+  .fk-card:hover {
+    box-shadow: 0 4px 16px 0 rgba(0,0,0,.12);
+  }
+
+  /* Badges */
+  .fk-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  /* Primary button — Flipkart yellow */
+  .fk-btn-primary {
+    background: #ffe01b;
+    color: #2e2e2e;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 10px 20px;
+    border-radius: 2px;
+    border: 1px solid #f5d500;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,.12);
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .fk-btn-primary:hover {
+    background: #f5d500;
+    box-shadow: 0 2px 8px rgba(0,0,0,.18);
+  }
+  .fk-btn-primary:active { transform: scale(0.98); }
+  .fk-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Secondary/blue button */
+  .fk-btn-blue {
+    background: #2874f0;
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 10px 20px;
+    border-radius: 2px;
+    border: none;
+    transition: all 0.15s ease;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .fk-btn-blue:hover { background: #1a5dc8; }
+  .fk-btn-blue:active { transform: scale(0.98); }
+  .fk-btn-blue:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Ghost button */
+  .fk-btn-ghost {
+    background: transparent;
+    color: #2874f0;
+    font-weight: 500;
+    font-size: 13px;
+    padding: 8px 16px;
+    border-radius: 2px;
+    border: 1px solid #2874f0;
+    transition: all 0.15s ease;
+    cursor: pointer;
+  }
+  .fk-btn-ghost:hover { background: #e8f0fe; }
+
+  /* Danger button */
+  .fk-btn-danger {
+    background: transparent;
+    color: #ff4a4a;
+    padding: 6px;
+    border-radius: 2px;
+    border: none;
+    transition: all 0.15s ease;
+    cursor: pointer;
+  }
+  .fk-btn-danger:hover { background: #fff0f0; }
+
+  /* Input */
+  .fk-input {
+    width: 100%;
+    background: #ffffff;
+    border: 1px solid #e0e0e0;
+    color: #2e2e2e;
+    padding: 10px 12px;
+    font-size: 14px;
+    border-radius: 2px;
+    outline: none;
+    transition: border-color 0.15s;
+    font-family: 'Roboto', sans-serif;
+  }
+  .fk-input::placeholder { color: #c2c2c2; }
+  .fk-input:focus { border-color: #2874f0; }
+  .fk-input.error { border-color: #ff4a4a; }
+
+  .fk-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: #878787;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* Stat card */
+  .fk-stat-card {
+    background: #ffffff;
+    border: 1px solid #f0f0f0;
+    box-shadow: 0 2px 4px 0 rgba(0,0,0,.08);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Table */
+  .fk-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .fk-table th {
+    background: #f1f3f6;
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 600;
+    color: #878787;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  .fk-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 14px;
+    color: #2e2e2e;
+  }
+  .fk-table tr:hover td { background: #f8f9fa; }
+  .fk-table tr:last-child td { border-bottom: none; }
+
+  /* Progress bar */
+  .fk-progress-bar {
+    height: 4px;
+    background: #e0e0e0;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .fk-progress-fill {
+    height: 100%;
+    background: #2874f0;
+    border-radius: 2px;
+    transition: width 0.7s ease;
+  }
+}
